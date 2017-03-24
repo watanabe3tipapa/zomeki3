@@ -1,6 +1,8 @@
 class Reception::OpensScript < Cms::Script::Publication
   def expire_by_task
-    if (item = params[:item]) && item.state_public?
+    return unless item = params[:item]
+
+    if item.state_public?
       ::Script.current
       info_log "-- Expire: #{item.class}##{item.id}"
 
@@ -9,8 +11,10 @@ class Reception::OpensScript < Cms::Script::Publication
       Sys::OperationLog.script_log(item: item, site: item.content.site, action: 'expire')
 
       info_log 'OK: Expired'
-      params[:task].destroy
       ::Script.success
+      return true
+    elsif item.state_closed?
+      return true
     end
   end
 end

@@ -64,6 +64,10 @@ class Reception::Open < ApplicationRecord
     state == 'public'
   end
 
+  def state_closed?
+    state == 'closed'
+  end
+
   def available_period?(time = Time.now)
     expired_at.nil? || time <= expired_at
   end
@@ -104,7 +108,12 @@ class Reception::Open < ApplicationRecord
     return if !state_public? || !expired_at
 
     task = tasks.where(name: 'expire').first_or_initialize
+    task.site_id = content.site_id
+    task.state = 'queued'
+    task.provider_job_id = nil
     task.process_at = expired_at
     task.save
+
+    enqueue_tasks
   end
 end
