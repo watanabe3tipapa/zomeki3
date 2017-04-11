@@ -1,6 +1,4 @@
 class Cms::NodesScript < Cms::Script::Publication
-  include Sys::Lib::File::Transfer
-
   def publish
     @ids = {}
 
@@ -16,9 +14,6 @@ class Cms::NodesScript < Cms::Script::Publication
         publish_node(node)
       end
     end
-
-    # file transfer
-    transfer_files(logging: true) if Zomeki.config.application['sys.transfer_to_publish']
   end
 
   def publish_node(node)
