@@ -53,15 +53,15 @@ class Sys::Admin::KanaDictionariesController < Cms::Controller::Admin::Base
   end
 
   def make
-    res = false
-    Cms::Site.order(:id).each do |site|
-      Cms::KanaDictionary.make_dic_file(site.id)
-    end
-    res = Cms::KanaDictionary.make_dic_file
-    if res == true
+    makers = [Cms::KanaDictionary::Maker.new]
+    makers += Cms::Site.order(:id).map { |site| Cms::KanaDictionary::Maker.new(site_id: site.id) }
+    makers.each(&:make_dic)
+
+    errors = makers.map(&:errors).flatten
+    if errors.blank?
       flash[:notice] = '辞書を更新しました。'
     else
-      flash[:notice] = res.join('<br />')
+      flash[:notice] = errors.join('<br />')
     end
 
     redirect_to sys_kana_dictionaries_url

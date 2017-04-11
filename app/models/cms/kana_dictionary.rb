@@ -35,46 +35,6 @@ class Cms::KanaDictionary < ApplicationRecord
     return true
   end
 
-  def self.make_dic_file(_site_id=nil)
-    mecab_index = Zomeki.config.application['cms.mecab_index']
-    mecab_dic   = Zomeki.config.application['cms.mecab_dic']
-
-    errors = []
-    data   = []
-
-    items = self.order(:id)
-    if _site_id.present?
-      dictionary = Cms::KanaDictionary.arel_table
-      items = items.where(dictionary[:site_id].eq(_site_id).or(dictionary[:site_id].eq(nil)))
-    end
-    items.each do |item|
-      if item.mecab_csv == nil
-        data << item.mecab_csv if item.convert_csv == true
-        next
-      end
-      data << item.mecab_csv if !item.mecab_csv.blank?
-    end
-
-    if data.blank?
-      errors << "登録データが見つかりません。"
-      return errors.size > 0 ? errors : true
-    end
-
-    csv = Tempfile::new(["mecab", ".csv"], '/tmp')
-    csv.puts(data.join("\n"))
-    csv.close
-
-    dic = user_dic(_site_id)
-
-    require 'open3'
-    out = Open3.capture3(mecab_index, '-d', mecab_dic, '-u', dic, '-f', 'utf8', '-t', 'utf8', csv.path)[0]
-    errors << "辞書の作成に失敗しました" unless out =~ /done!$/
-
-    FileUtils.rm(csv.path) if FileTest.exists?(csv.path)
-
-    return errors.size > 0 ? errors : true
-  end
-
   class << self
     def mecab_rc(site_id = nil)
       user_dic(site_id) # confirm
