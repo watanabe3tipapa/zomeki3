@@ -16,6 +16,11 @@ module Sys::Model::Base::File
 
     alias :path :upload_path
     include Sys::Model::TextExtraction
+
+    define_callbacks :save_file, scope: [:kind, :name]
+    define_callbacks :remove_file, scope: [:kind, :name]
+    set_callback :save_file, :after, Cms::FileTransferCallbacks.new(:upload_path, recursive: true)
+    set_callback :remove_file, :after, Cms::FileTransferCallbacks.new(:upload_path, recursive: true)
   end
 
   class_methods do
@@ -352,20 +357,23 @@ module Sys::Model::Base::File
 
   ## filter/aftar_save
   def upload_internal_file
-    Util::File.put(upload_path, :data => @file_content, :mkdir => true) unless @file_content.nil?
+    run_callbacks :create_file do
+      Util::File.put(upload_path, :data => @file_content, :mkdir => true) unless @file_content.nil?
 
-    if @thumbnail_image
-      thumb_path = ::File.dirname(upload_path) + "/thumb.dat"
-      Util::File.put(thumb_path, :data => @thumbnail_image.to_blob, :mkdir => true)
+      if @thumbnail_image
+        thumb_path = ::File.dirname(upload_path) + "/thumb.dat"
+        Util::File.put(thumb_path, :data => @thumbnail_image.to_blob, :mkdir => true)
+      end
+      true
     end
-
-    return true
   end
 
   ## filter/aftar_destroy
   def remove_internal_file
-    FileUtils.remove_entry_secure(upload_path) if ::File.exist?(upload_path)
-    FileUtils.remove_entry_secure(upload_path(type: :thumb)) if ::File.exist?(upload_path(type: :thumb))
-    return true
+    run_callbacks :remove_file do
+      FileUtils.remove_entry_secure(upload_path) if ::File.exist?(upload_path)
+      FileUtils.remove_entry_secure(upload_path(type: :thumb)) if ::File.exist?(upload_path(type: :thumb))
+      true
+    end
   end
 end

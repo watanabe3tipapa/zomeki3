@@ -2,8 +2,8 @@ class Cms::Storage::Stylesheet < Sys::Storage::Entry
   include Cms::Model::Auth::Concept
 
   define_attribute_methods :concept_id
-  set_callback :save, :before, :save_stylesheet
-  set_callback :destroy, :before, :destroy_stylesheet
+  set_callback :save_file, :before, :save_stylesheet
+  set_callback :remove_file, :before, :destroy_stylesheet
 
   def concept_id
     @concept_id

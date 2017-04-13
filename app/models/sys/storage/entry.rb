@@ -3,10 +3,13 @@ class Sys::Storage::Entry
   include ActiveModel::Dirty
   include ActiveSupport::Callbacks
 
-  define_callbacks :validation, :save, :destroy
   define_attribute_methods :base_dir, :name, :body
   attr_accessor :entry_type, :site_id
   attr_accessor :allow_overwrite, :new_entry
+
+  define_callbacks :validation, :save_file, :remove_file, scope: [:kind, :name]
+  set_callback :save_file, :after, Cms::FileTransferCallbacks.new([:path, :path_was])
+  set_callback :remove_file, :after, Cms::FileTransferCallbacks.new([:path, :path_was])
 
   with_options if: -> { file_entry? } do
     validates :name, presence: { message: 'ファイル名を入力してください。' }
@@ -185,25 +188,8 @@ class Sys::Storage::Entry
     end
 
     ApplicationRecord.transaction do
-      run_callbacks :save do
-        if new_entry
-          # new file / new directory
-          case entry_type
-          when :directory
-            ::Storage.mkdir(path) unless ::Storage.exists?(path)
-          when :file
-            ::Storage.binwrite(path, body) unless ::Storage.exists?(path)
-          end
-        else
-          # move
-          if path_was != path
-            ::Storage.mv(path_was, path) if ::Storage.exists?(path_was) && !::Storage.exists?(path)
-          end
-          # edit file
-          if body_changed?
-            ::Storage.binwrite(path, body) if ::Storage.exists?(path)
-          end
-        end
+      run_callbacks :save_file do
+        save_file_or_directory
       end
     end
 
@@ -216,7 +202,7 @@ class Sys::Storage::Entry
   end
 
   def destroy
-    run_callbacks :destroy do
+    run_callbacks :remove_file do
       ::Storage.rm_rf(path)
     end
     return true
@@ -261,6 +247,27 @@ class Sys::Storage::Entry
 
     if max_size && body && body.size > max_size.to_i * (1024**2)
       errors.add(:base, "容量制限を超えています。＜#{max_size}MB＞")
+    end
+  end
+
+  def save_file_or_directory
+    if new_entry
+      # new file / new directory
+      case entry_type
+      when :directory
+        ::Storage.mkdir(path) unless ::Storage.exists?(path)
+      when :file
+        ::Storage.binwrite(path, body) unless ::Storage.exists?(path)
+      end
+    else
+      # move
+      if path_was != path
+        ::Storage.mv(path_was, path) if ::Storage.exists?(path_was) && !::Storage.exists?(path)
+      end
+      # edit file
+      if body_changed?
+        ::Storage.binwrite(path, body) if ::Storage.exists?(path)
+      end
     end
   end
 

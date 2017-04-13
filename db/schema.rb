@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20170323105211) do
+ActiveRecord::Schema.define(version: 20170410050624) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -322,6 +322,17 @@ ActiveRecord::Schema.define(version: 20170323105211) do
     t.text     "feed_title"
     t.text     "link_alternate"
     t.integer  "entry_count"
+  end
+
+  create_table "cms_file_transfers", force: :cascade do |t|
+    t.integer  "site_id"
+    t.string   "state"
+    t.string   "path"
+    t.boolean  "recursive"
+    t.integer  "priority"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["site_id"], name: "index_cms_file_transfers_on_site_id", using: :btree
   end
 
   create_table "cms_inquiries", force: :cascade do |t|
@@ -1505,7 +1516,11 @@ ActiveRecord::Schema.define(version: 20170323105211) do
     t.integer  "processable_id"
     t.string   "processable_type"
     t.integer  "site_id"
+    t.string   "state"
+    t.integer  "provider_job_id"
     t.index ["processable_type", "processable_id"], name: "index_sys_tasks_on_processable_type_and_processable_id", using: :btree
+    t.index ["site_id"], name: "index_sys_tasks_on_site_id", using: :btree
+    t.index ["state"], name: "index_sys_tasks_on_state", using: :btree
   end
 
   create_table "sys_temp_texts", force: :cascade do |t|

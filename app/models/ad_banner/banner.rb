@@ -45,6 +45,10 @@ class AdBanner::Banner < ApplicationRecord
   after_save     Cms::Publisher::ContentRelatedCallbacks.new, if: :changed?
   before_destroy Cms::Publisher::ContentRelatedCallbacks.new
 
+  define_callbacks :publish_file, :close_file, scope: [:kind, :name]
+  set_callback :publish_file, :after, Cms::FileTransferCallbacks.new([:image_path, :image_mobile_path, :image_smart_phone_path])
+  set_callback :close_file, :after, Cms::FileTransferCallbacks.new([:image_path, :image_mobile_path, :image_smart_phone_path])
+
   def image_uri
     return '' unless content.public_node
     "#{content.public_node.public_uri}#{name}"
@@ -76,15 +80,19 @@ class AdBanner::Banner < ApplicationRecord
 
   def publish_or_close_image
     if published?
-      [image_path, image_mobile_path, image_smart_phone_path].each do |path|
-        next if path == image_smart_phone_path && !self.content.site.publish_for_smart_phone?
-        FileUtils.mkdir_p ::File.dirname(path)
-        FileUtils.cp upload_path, path
+      run_callbacks :publish_file do
+        [image_path, image_mobile_path, image_smart_phone_path].each do |path|
+          next if path == image_smart_phone_path && !self.content.site.publish_for_smart_phone?
+          FileUtils.mkdir_p ::File.dirname(path)
+          FileUtils.cp upload_path, path
+        end
       end
     else
-      [image_path, image_mobile_path, image_smart_phone_path].each do |path|
-        FileUtils.rm image_path if ::File.exist?(path)
-        FileUtils.rmdir ::File.dirname(path)
+      run_callbacks :close_file do
+        [image_path, image_mobile_path, image_smart_phone_path].each do |path|
+          FileUtils.rm image_path if ::File.exist?(path)
+          FileUtils.rmdir ::File.dirname(path)
+        end
       end
     end
   end

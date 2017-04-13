@@ -431,7 +431,11 @@ class GpArticle::Doc < ApplicationRecord
     return false unless save(:validate => false)
     publish_page(content, path: public_path, uri: public_uri)
     publish_files
+  end
+
+  def publish_files
     publish_qrcode
+    super
   end
 
   def rebuild(content, options={})
@@ -446,11 +450,10 @@ class GpArticle::Doc < ApplicationRecord
     #TODO: スマートフォン向けファイル書き出し要再検討
     @public_files_path = "#{::File.dirname(public_smart_phone_path)}/file_contents" if options[:dependent] == :smart_phone
     @public_qrcode_path = "#{::File.dirname(public_smart_phone_path)}/qrcode.png" if options[:dependent] == :smart_phone
-    result = publish_files
-    publish_qrcode
+    publish_files
     @public_files_path = nil if options[:dependent] == :smart_phone
     @public_qrcode_path = nil if options[:dependent] == :smart_phone
-    return result
+    return true
   end
 
   def external_link?

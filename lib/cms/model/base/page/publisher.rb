@@ -1,8 +1,10 @@
 require 'digest/md5'
 module Cms::Model::Base::Page::Publisher
-  def self.included(mod)
-    mod.has_many :publishers, class_name: 'Sys::Publisher', dependent: :destroy, as: :publishable
-    mod.after_save :close_page
+  extend ActiveSupport::Concern
+
+  included do
+    has_many :publishers, class_name: 'Sys::Publisher', dependent: :destroy, as: :publishable
+    after_save :close_page
   end
 
   def public_status
@@ -77,21 +79,20 @@ module Cms::Model::Base::Page::Publisher
     return true if mobile_page?
     return true if hash && pub && hash == pub.content_hash && ::File.exist?(path)
 
-clean_statics = Zomeki.config.application['sys.clean_statics']
-if clean_statics
-    if File.exist?(path)
-      File.delete(path)
-      info_log "DELETED: #{path}"
-    end
-    @published = true
-else
-    if ::File.exist?(path) && ::File.new(path).read == content
-      #FileUtils.touch([path])
-    else
-      Util::File.put(path, :data => content, :mkdir => true)
+    if Zomeki.config.application['sys.clean_statics']
+      if File.exist?(path)
+        File.delete(path)
+        info_log "DELETED: #{path}"
+      end
       @published = true
+    else
+      if ::File.exist?(path) && ::File.new(path).read == content
+        #FileUtils.touch([path])
+      else
+        Util::File.put(path, :data => content, :mkdir => true)
+        @published = true
+      end
     end
-end
 
     pub ||= Sys::Publisher.new
     pub.publishable  = self

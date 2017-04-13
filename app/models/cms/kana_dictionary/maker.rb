@@ -3,6 +3,9 @@ class Cms::KanaDictionary::Maker
 
   attr_accessor :site_id, :dic_path, :errors
 
+  define_callbacks :save_file, scope: [:kind, :name]
+  set_callback :save_file, :after, Cms::FileTransferCallbacks.new(:dic_path), if: -> { site_id }
+
   def initialize(site_id: nil)
     @site_id = site_id
     @dic_path = Cms::KanaDictionary.user_dic(@site_id)
@@ -30,11 +33,13 @@ class Cms::KanaDictionary::Maker
     csv.puts(data)
     csv.close
 
-    require 'open3'
-    mecab_index = Zomeki.config.application['cms.mecab_index']
-    mecab_dic = Zomeki.config.application['cms.mecab_dic']
-    out = Open3.capture3(mecab_index, '-d', mecab_dic, '-u', @dic_path, '-f', 'utf8', '-t', 'utf8', csv.path)[0]
-    @errors << "辞書の作成に失敗しました" unless out =~ /done!$/
+    run_callbacks :save_file do
+      require 'open3'
+      mecab_index = Zomeki.config.application['cms.mecab_index']
+      mecab_dic = Zomeki.config.application['cms.mecab_dic']
+      out = Open3.capture3(mecab_index, '-d', mecab_dic, '-u', @dic_path, '-f', 'utf8', '-t', 'utf8', csv.path)[0]
+      @errors << "辞書の作成に失敗しました" unless out =~ /done!$/
+    end
 
     FileUtils.rm(csv.path) if FileTest.exists?(csv.path)
 

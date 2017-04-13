@@ -11,10 +11,14 @@ module Sys::Model::Rel::File
     before_save :publish_files
     before_save :close_files
     after_create :fix_tmp_files, if: -> { in_tmp_id.present? }
+
+    define_callbacks :publish_file, :close_file, scope: [:kind, :name]
+    set_callback :publish_file, :after, Cms::FileTransferCallbacks.new(:public_files_path, recursive: true)
+    set_callback :close_file, :after, Cms::FileTransferCallbacks.new(:public_files_path, recursive: true)
   end
 
   def public_files_path
-    "#{::File.dirname(public_path)}/files"
+    "#{::File.dirname(public_path)}/file_contents"
   end
 
   def publish_files

@@ -1,0 +1,14 @@
+development:
+  bin: rsync
+  opts: "-lptzv --delete"
+  dest_path: zomeki@192.168.25.151:/var/www/zomeki3_transfer
+
+test:
+  bin: rsync
+  opts: "-lptzv --delete"
+  dest_path:
+
+production:
+  bin: rsync
+  opts: "-lptzv --delete"
+  dest_path:
